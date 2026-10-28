@@ -1,0 +1,29 @@
+# Environment variables (Sirlar va tokenlar)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+
+# Telegram sessiya fayllari (Xavfsizlik uchun - hech qachon GitHub ga yuklanmasin!)
+*.session
+*.session-journal
+
+# Ma'lumotlar bazasi va kesh
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Log fayllari
+*.log
+bot.log
+
+# Tizim fayllari
+.DS_Store
+Thumbs.db
