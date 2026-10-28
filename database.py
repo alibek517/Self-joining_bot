@@ -1,17 +1,21 @@
 import sqlite3
 import datetime
+import os
+import contextlib
 from typing import List, Tuple, Optional
 
-DB_FILE = "taxi_system.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, "taxi_system.db")
 
+@contextlib.contextmanager
 def get_connection():
     conn = sqlite3.connect(DB_FILE, timeout=60.0)
     try:
         conn.execute("PRAGMA busy_timeout = 60000;")
         conn.execute("PRAGMA synchronous = NORMAL;")
-    except Exception:
-        pass
-    return conn
+        yield conn
+    finally:
+        conn.close()
 
 def init_db():
     # WAL rejimini faqat bir marta xavfsiz sozlash (agar OneDrive yoki tizim band bo'lsa xato bermasligi uchun)
@@ -259,13 +263,27 @@ def increment_today_join_count():
 
 # --- Xabarlar dublikatini oldini olish ---
 
+_seen_messages_memory_cache = set()
+
 def is_message_seen(msg_id: int, chat_id: int) -> bool:
+    key = (msg_id, chat_id)
+    if key in _seen_messages_memory_cache:
+        return True
     with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM seen_messages WHERE msg_id = ? AND chat_id = ?", (msg_id, chat_id))
-        return cursor.fetchone() is not None
+        seen = cursor.fetchone() is not None
+        if seen:
+            if len(_seen_messages_memory_cache) > 200000:
+                _seen_messages_memory_cache.clear()
+            _seen_messages_memory_cache.add(key)
+        return seen
 
 def mark_message_seen(msg_id: int, chat_id: int):
+    key = (msg_id, chat_id)
+    if len(_seen_messages_memory_cache) > 200000:
+        _seen_messages_memory_cache.clear()
+    _seen_messages_memory_cache.add(key)
     now = datetime.datetime.now().isoformat()
     with get_connection() as conn:
         cursor = conn.cursor()
